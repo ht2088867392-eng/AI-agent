@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "AI Video Assistant Tracker",
+  "version": "0.2.0",
+  "description": "Record Bilibili video watching progress for the AI assistant.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "https://www.bilibili.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.bilibili.com/video/*"
+      ],
+      "js": [
+        "platform.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

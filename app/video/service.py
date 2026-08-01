@@ -1,8 +1,11 @@
-from sqlmodel.ext.asyncio.session import AsyncSession
-from .schemas import VideocreateModel
-from app.db.models import VideoRecord
+from .schemas import VideocreateModel, VideoProgressReport
 from sqlmodel import select, desc
 from urllib.parse import urlsplit, parse_qsl, urlunsplit, urlencode
+from datetime import datetime
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.models import VideoRecord
 
 
 class VideoService:
@@ -26,8 +29,8 @@ class VideoService:
             )
             .limit(1)
         )
-        result = await session.exec(statement)
-        return result.first()
+        result = await session.execute(statement)
+        return result.scalar_one_or_none()
 
     async def find_latest_video(self, session: AsyncSession) -> VideoRecord | None:
         """
@@ -44,33 +47,31 @@ class VideoService:
             )
             .limit(1)
         )
-        result = await session.exec(statement)
-        return result.first()
+        result = await session.execute(statement)
+        return result.scalar_one_or_none()
 
 
 def build_resume_url(
-        *,
-        platform: str,
-        url: str,
-        seconds: int,
+    url: str,
+    seconds: int,
 ) -> str:
     """
-    根据平台生成带播放进度的 URL。
+    给 Bilibili 视频 URL 添加续播时间参数 t。
     """
+
     if seconds <= 0:
         return url
-    platform_name = platform.strip().lower()
+
     parts = urlsplit(url)
-    query = dict(parse_qsl(parts.query))
-    if platform_name in {
-        "bilibili",
-        "b站",
-        "哔哩哔哩",
-    }:
-        query["t"] = str(seconds)
-    else:
-        # 第一版对未知平台使用通用 t 参数。
-        query["t"] = str(seconds)
+
+    query = dict(
+        parse_qsl(
+            parts.query,
+            keep_blank_values=True,
+        )
+    )
+
+    query["t"] = str(seconds)
 
     return urlunsplit(
         (
@@ -81,3 +82,109 @@ def build_resume_url(
             parts.fragment,
         )
     )
+
+
+# 视频观看记录创建和更新
+class VideoRecordService:
+    async def report_progress(self,
+                              session: AsyncSession,
+                              payload: VideoProgressReport,
+                              ) -> tuple[VideoRecord, bool]:
+        """
+        创建或更新一条视频观看记录。
+
+        Returns:
+            (record, created)
+        """
+        # 查询观看记录
+        statement = select(VideoRecord).where(
+            VideoRecord.platform == payload.platform,
+            VideoRecord.platform_video_id
+            == payload.platform_video_id,
+        )
+
+        result = await session.execute(statement)
+        record = result.scalar_one_or_none()
+
+        watched_at = payload.reported_at or datetime.now()
+
+        if record is None:
+            record = VideoRecord(
+                title=payload.title,
+                platform=payload.platform,
+                platform_video_id=payload.platform_video_id,
+                url=str(payload.url),
+                progress_seconds=payload.progress_seconds,
+                duration_seconds=payload.duration_seconds,
+                position_text=VideoRecordService.format_position(
+                    payload.progress_seconds
+                ),
+                last_watched_at=watched_at,
+            )
+
+            session.add(record)
+            # 处理多个请求同时创建视频造成的异常
+            try:
+                await session.commit()
+            except IntegrityError:
+                # 两个请求同时首次创建同一视频时，
+                # 唯一约束可能导致其中一个失败。
+                await session.rollback()
+
+                result = await session.execute(statement)
+                record = result.scalar_one()
+
+                VideoRecordService.apply_progress(
+                    record=record,
+                    payload=payload,
+                    watched_at=watched_at,
+                )
+
+                await session.commit()
+                await session.refresh(record)
+
+                return record, False
+
+            await session.refresh(record)
+            return record, True
+
+        VideoRecordService.apply_progress(
+            record=record,
+            payload=payload,
+            watched_at=watched_at,
+        )
+
+        await session.commit()
+        await session.refresh(record)
+
+        return record, False
+
+    # 更新视频数据
+    @staticmethod
+    def apply_progress(
+                       *,
+                       record: VideoRecord,
+                       payload: VideoProgressReport,
+                       watched_at: datetime,
+                       ) -> None:
+        record.title = payload.title
+        record.url = str(payload.url)
+        record.progress_seconds = payload.progress_seconds
+        record.duration_seconds = payload.duration_seconds
+        record.position_text = (
+            VideoRecordService.format_position(
+                payload.progress_seconds
+            )
+        )
+        record.last_watched_at = watched_at
+
+    # 将时间变为人能看懂的时间
+    @staticmethod
+    def format_position( seconds: int) -> str:
+        hours, remainder = divmod(seconds, 3600)
+        minutes, secs = divmod(remainder, 60)
+
+        if hours:
+            return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+        return f"{minutes:02d}:{secs:02d}"
