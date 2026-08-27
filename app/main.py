@@ -12,9 +12,10 @@ app = FastAPI(
 
 
 app.add_middleware(
+    # CORS跨域
     CORSMiddleware,
     allow_origins=[
-        "*",
+         "chrome-extension://fdojgofmlebkpapjbkifkmokedlpcmnb",
     ],
     allow_credentials=False,
     allow_methods=["POST", "OPTIONS"],

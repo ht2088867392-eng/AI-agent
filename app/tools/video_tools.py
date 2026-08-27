@@ -1,11 +1,12 @@
 import webbrowser
 from langchain.tools import tool
-from app.video.service import VideoService,build_resume_url
+from app.video.service import VideoService
 from app.db.main import AsyncSessionLocal
 
 
-
 video_service = VideoService()
+
+
 @tool
 async def find_title_video(name: str) -> dict:
     """
@@ -77,7 +78,7 @@ def open_video(
     则从对应时间位置继续播放。
     """
 
-    final_url = build_resume_url(
+    final_url = video_service.build_resume_url(
         url=url,
         seconds=progress_seconds,
     )

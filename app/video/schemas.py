@@ -1,17 +1,17 @@
-
 from datetime import datetime
 from pydantic import BaseModel, Field, HttpUrl
 
 
 class VideoSchemas(BaseModel):
     id: int
-    title: str
-    platform: str
-    url: str
-    position_text: str
-    progress_seconds: int
-    last_watched_at: datetime
-    created_at: datetime
+    title: str                      # 视频名称
+    platform: str                   # 视频平台
+    url: str                        # 视频原始链接
+    position_text: str              # 播放位置
+    progress_seconds: int           # 实际播放进度
+    last_watched_at: datetime       # 最后一次观看时间
+    created_at: datetime            # 创建时间
+
 
 class VideocreateModel(BaseModel):
     title: str
@@ -19,11 +19,6 @@ class VideocreateModel(BaseModel):
     url: str
     position_text: str
     progress_seconds: int
-
-
-
-
-
 
 
 class VideoProgressReport(BaseModel):

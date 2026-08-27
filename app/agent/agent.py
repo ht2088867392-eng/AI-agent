@@ -1,21 +1,34 @@
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
-from app.tools.video_tools import find_title_video,find_latest_video,open_video
-
-
+from app.tools.video_tools import find_title_video, find_latest_video, open_video
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from contextlib import asynccontextmanager
+from langgraph.store.postgres import AsyncPostgresStore
+from app.config import Config
+from langchain_openai import OpenAIEmbeddings
 
 load_dotenv()
 
+DB_URI = Config.DB_URI
+
+embedding = OpenAIEmbeddings(
+    model="BAAI/bge-large-zh-v1.5",
+    api_key=Config.SILICONFLOW_API_KEY,
+    base_url="https://api.siliconflow.cn/v1",
+    check_embedding_ctx_length=False,
+)
+
 model = init_chat_model(
-    model="deepseek-chat"
+    model="deepseek-chat",
+    model_provider="deepseek",
 )
 tools = [
     find_title_video,
     find_latest_video,
     open_video
 ]
-prompt="""
+prompt = """
 你是一个个人视频助手，可以查询和继续用户的观看记录。
 
 你必须遵守以下规则：
@@ -48,9 +61,46 @@ prompt="""
 """
 
 
-agent = create_agent(
-    model=model,
-    tools=tools,
-    system_prompt=prompt
-)
+@asynccontextmanager
+async def get_agent():
+    async with AsyncPostgresSaver.from_conn_string(
+            Config.DB_URI
+    ) as checkpointer:
+        # 初始化表
+        # await checkpointer.setup()
+
+        agent = create_agent(
+            model=model,
+            tools=tools,
+            system_prompt=prompt,
+            checkpointer=checkpointer,
+        )
+
+        yield agent
+
+
+# 会话记忆
+config = {
+    "configurable": {
+        "thread_id": "chat_003"
+    }
+}
+
+
+# 数据库连接工厂
+# noinspection PyArgumentList
+@asynccontextmanager
+async def memory_store():
+    # 创建store
+    async with AsyncPostgresStore.from_conn_string(
+            DB_URI,
+            index={
+                "dims": 1024,
+                "embed": embedding,
+                "fields": ["text"],
+            },
+    ) as store:
+        # 初始化数据库
+        # await store.setup()
+        yield store
 

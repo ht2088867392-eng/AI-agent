@@ -1,40 +1,58 @@
-
 import asyncio
+from langgraph.store.postgres import AsyncPostgresStore
+from app.config import Config
+from langchain_openai import OpenAIEmbeddings
 
-from app.db.main import AsyncSessionLocal
-from app.video.schemas import VideocreateModel
-from app.video.service import VideoService
+DB_URI = Config.DB_URI
 
-video_service = VideoService()
-async def seed_videos() -> None:
-    videos = [
-        {
-            "title": "【文曰小强】84分钟速读《三体》大合集",
-            "platform": "哔哩哔哩",
-            "url": "https://www.bilibili.com/video/BV11s41187QY/?spm_id_from=333.337.search-card.all.click&vd_source=738095cbe9f9d0694d9e7049311626fb",
-            "position_text": "第 1 集 ",
-            "progress_seconds": 0,
-        },
-        {
-            "title": "黑马程序员python零基础全套教程，8天python从入门到精通，学python看这套就够了",
-            "platform": "哔哩哔哩",
-            "url": "https://www.bilibili.com/video/BV1qW4y1a7fU/?spm_id_from=333.337.search-card.all.click&vd_source=738095cbe9f9d0694d9e7049311626fb",
-            "position_text": "第 1 集",
-            "progress_seconds": 0,
-        },
+embedding = OpenAIEmbeddings(
+    model="BAAI/bge-large-zh-v1.5",
+    api_key=Config.SILICONFLOW_API_KEY,
+    base_url="https://api.siliconflow.cn/v1",
+    check_embedding_ctx_length=False,
+)
+
+
+async def get_user_memories(
+    store: AsyncPostgresStore,
+    user_id: str,
+    query: str,
+):
+    memories = await store.asearch(
+        ("memories", user_id),
+        query=query,
+        limit=5,
+    )
+
+    return [
+        item.value["text"]
+        for item in memories
     ]
 
-    async with AsyncSessionLocal() as session:
-        for item in videos:
-            video_data = VideocreateModel(**item)
 
-            new_video = await video_service.add_video(
-                video_data=video_data,
-                session=session,
-            )
+async def main():
+    async with AsyncPostgresStore.from_conn_string(
+            DB_URI,
+            index={
+                "dims": 1024,
+                "embed": embedding,
+                "fields": ["text"],
+            },
+    ) as store:
 
-            print(f"已添加：{new_video.title}")
+        # 精确读取
+        results = await store.asearch(
+            ("memories", "user_001"),
+            query="用户做后端开发使用什么？",
+            limit=5,
+        )
+
+        for item in results:
+            print(item.value)
 
 
 if __name__ == "__main__":
-    asyncio.run(seed_videos())
+    asyncio.set_event_loop_policy(
+        asyncio.WindowsSelectorEventLoopPolicy()
+    )
+    asyncio.run(main())

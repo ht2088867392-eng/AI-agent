@@ -1,28 +1,25 @@
 from typing import Annotated
-
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.api.deps import verify_extension_token
 from app.db.main import get_session
 from app.video.schemas import (
     VideoProgressReport,
     VideoProgressResponse,
 )
-from app.video.service import VideoRecordService
+from app.video.service import VideoService
 
-video_record_service = VideoRecordService()
+video_record_service = VideoService()
 
 video_router = APIRouter(
     prefix="/api/v1/video-records",
     tags=["video-records"],
     dependencies=[
-        Depends(verify_extension_token),
+        Depends(verify_extension_token),    # 验证token是否正确
     ],
 )
 
 
-# 接收浏览器扩展上报的视频播放进度
 @video_router.post(
     "/progress",
     response_model=VideoProgressResponse,
@@ -35,7 +32,15 @@ async def report_video_progress(
             Depends(get_session),
         ],
 ) -> VideoProgressResponse:
+    """
+    接收浏览器扩展上报的视频播放进度
+    Args:
+        payload:VideoProgressReport模型对象数据
+        session: 会话
 
+    Returns:添加的视频记录数据
+
+    """
     # 传回元组，true创建新记录，false更新记录
     record, created = await video_record_service.report_progress(
         session=session,

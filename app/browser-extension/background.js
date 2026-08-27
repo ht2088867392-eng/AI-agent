@@ -166,7 +166,7 @@ async function sendProgress(payload) {
   if (
     !EXTENSION_TOKEN
     || EXTENSION_TOKEN ===
-      "替换为与你.env一致的Token"
+      "xkkZg9r_08X8amE8LvHWoQGzZPa54ylVrWUS4esDWds"
   ) {
     throw new Error(
       "Extension token is not configured"
