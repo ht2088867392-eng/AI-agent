@@ -11,7 +11,7 @@ config = config
 async def run(agent, store) -> None:
     print("个人视频助手已启动。")
     print("输入 exit 或 quit 退出。")
-    memory_service = MemoryService(store)
+    # memory_service = MemoryService(store)
     while True:
         try:
             user_input = input("\n你：").strip()
@@ -23,21 +23,21 @@ async def run(agent, store) -> None:
                 print("已退出。")
                 break
 
-            # 读取长期记忆
-            user_id = "user_001"
-            memories = await memory_service.search(
-                user_id=user_id,
-                query=user_input,
-            )
-            memory_text = "\n".join(
-                m.value["text"]
-                for m in memories
-            )
+            # # 读取长期记忆
+            # user_id = "user_001"
+            # memories = await memory_service.search(
+            #     user_id=user_id,
+            #     query=user_input,
+            # )
+            # memory_text = "\n".join(
+            #     m.value["text"]
+            #     for m in memories
+            # )
             messages = [
-                {
-                    "role": "system",
-                    "content": memory_text
-                },
+                # {
+                #     "role": "system",
+                #     "content": memory_text
+                # },
                 {
                     "role": "user",
                     "content": user_input
@@ -54,16 +54,16 @@ async def run(agent, store) -> None:
             final_message = result["messages"][-1].content
             print(f"\nAI：{final_message}")
 
-            # 写入长期记忆
-            extracted_memories = await extract_memories(
-                user_message=user_input,
-
-            )
-            for memory in extracted_memories:
-                await memory_service.save(
-                    user_id=user_id,
-                    memory=memory,
-                )
+            # # 写入长期记忆
+            # extracted_memories = await extract_memories(
+            #     user_message=user_input,
+            #
+            # )
+            # for memory in extracted_memories:
+            #     await memory_service.save(
+            #         user_id=user_id,
+            #         memory=memory,
+            #     )
 
         except KeyboardInterrupt:
             print("\n已退出。")

@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Header, HTTPException, status
 from app.config import Config
 
-
+# 负责对 浏览器扩展(Chrome Extension)调用后端 API 时进行 Token 鉴权。
 # FastAPI 请求鉴权依赖
 async def verify_extension_token(
         x_extension_token: Annotated[str | None, Header()] = None,
