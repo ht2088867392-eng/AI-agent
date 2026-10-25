@@ -2,6 +2,7 @@ from langchain.chat_models import init_chat_model
 from langchain.agents import create_agent
 from app.agent.skill_loader import load_skills, render_skill_catalog
 from dotenv import load_dotenv
+from app.tools.knowledge_tools import knowledge_search
 from app.tools.video_tools import find_title_video, find_latest_video, open_video
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from contextlib import asynccontextmanager
@@ -29,7 +30,8 @@ model = init_chat_model(
 tools = [
     find_title_video,
     find_latest_video,
-    open_video
+    open_video,
+    knowledge_search
 ]
 BASE_PROMPT = """你是一个个人 AI 助手。
 需要执行专门任务时，先根据技能目录选择相关技能并调用 load_skill 读取完整说明，再遵循技能流程。
@@ -70,7 +72,7 @@ async def get_agent():
 # 会话记忆
 config = {
     "configurable": {
-        "thread_id": "chat_004"
+        "thread_id": "chat_005"
     }
 }
 

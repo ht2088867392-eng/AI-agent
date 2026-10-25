@@ -2,16 +2,6 @@
 id: video_watch
 version: "1.0"
 description: 查询、查看进度或继续播放视频
-triggers:
-  - 继续
-  - 接着看
-  - 打开
-  - 播放
-  - 视频
-  - 教程
-  - 查找
-  - 观看记录
-  - 我看到哪里了
 tools:
   - find_title_video
   - find_latest_video

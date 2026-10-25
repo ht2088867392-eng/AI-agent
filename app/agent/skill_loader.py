@@ -1,10 +1,11 @@
+"""
+负责从 Markdown 文件读取技能并校验格式，例如必填字段、技能 ID 和引用的工具是否有效。
+"""
 from __future__ import annotations
-
 import re
 from collections.abc import Collection
 from dataclasses import dataclass
 from pathlib import Path
-
 import yaml
 
 
@@ -26,7 +27,6 @@ ALLOWED_FIELDS = {
     "id",
     "version",
     "description",
-    "triggers",
     "tools",
 }
 
@@ -43,8 +43,6 @@ class Skill:
     id: str
     version: str
     description: str
-    # triggers 目前只保存元数据，不负责在代码里匹配用户输入。
-    triggers: tuple[str, ...]
     # 技能声明计划使用的工具名称；加载时会检查这些名称是否已注册。
     tools: tuple[str, ...]
     # Markdown 元数据区之后的完整技能说明。
@@ -128,7 +126,7 @@ def _load_one(
             f"{path.name} 包含不支持的字段：{sorted(unknown_fields)}"
         )
 
-    required_fields = {"id", "version", "description", "triggers", "tools"}
+    required_fields = {"id", "version", "description", "tools"}
     missing_fields = required_fields - set(metadata)
     if missing_fields:
         raise SkillLoadError(
@@ -143,11 +141,7 @@ def _load_one(
     if not isinstance(description, str) or not description.strip():
         raise SkillLoadError(f"{path.name} 的 description 不能为空")
 
-    triggers = _string_tuple(metadata["triggers"], "triggers", path)
     tools = _string_tuple(metadata["tools"], "tools", path)
-
-    if not triggers:
-        raise SkillLoadError(f"{path.name} 至少需要一个 trigger")
 
     if available_tools is not None:
         unknown_tools = set(tools) - set(available_tools)     # tools集合和available_tools集合的差集
@@ -165,7 +159,6 @@ def _load_one(
         id=skill_id,
         version=str(metadata["version"]),
         description=description.strip(),
-        triggers=triggers,
         tools=tools,
         instructions=instructions,
         source=path,

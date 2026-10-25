@@ -1,7 +1,8 @@
+"""
+负责把已加载的技能包装成 Agent 可调用的 load_skill 工具，让 Agent 按技能 ID 获取完整说明。
+"""
 from collections.abc import Iterable
-
 from langchain.tools import tool
-
 from app.agent.skill_loader import Skill
 
 
