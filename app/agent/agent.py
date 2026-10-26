@@ -63,8 +63,8 @@ async def get_agent():
     async with AsyncPostgresSaver.from_conn_string(
             Config.DB_URI
     ) as checkpointer:
-        # 初始化表
-        # await checkpointer.setup()
+        # 确保处理聊天请求前，LangGraph 所需的检查点数据表已经存在。
+        await checkpointer.setup()
 
         yield build_agent(checkpointer)
 

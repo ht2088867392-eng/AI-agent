@@ -27,6 +27,7 @@ class KnowledgeService:
         documents = [
             Document(page_content=c["text"], metadata=c["meta"]) for c in docs
         ]
+
         # from_documents + persist_directory：向量自动落盘
         Chroma.from_documents(
             documents=documents,
@@ -46,16 +47,28 @@ class KnowledgeService:
 
     def search(self, query: str, k: int = 3) -> List[Document]:
         """从已落盘的向量库检索。"""
-        retriever = self.get_vectorstore().as_retriever(search_kwargs={"k": k})
+        retriever = self.get_vectorstore().as_retriever(
+            search_type="similarity",
+            search_kwargs={"k": k}
+        )
         return retriever.invoke(query)
 
 
 if __name__ == "__main__":
+    from langchain_core.prompts import PromptTemplate
+    from app.agent.agent import model
     service = KnowledgeService()
 
     # 首次（或 md 有更新时）才建库落盘；之后这行可注释掉
-    service.build("E:/笔记/我的脑图/AI应用开发学习/提示词模板范例.md")
+    # service.build("E:/笔记/我的脑图/AI应用开发学习/提示词模板范例.md")
 
     # 之后每次运行直接加载磁盘向量检索
-    for doc in service.search("智能体里怎么使用提示词"):
-        print(doc.page_content, "\n---")
+    documents = service.search("智能体里怎么使用提示词")
+    # for doc in documents:
+    #     print(doc.page_content, "\n---")
+
+    prompt = PromptTemplate(
+        template="你是一个知识库助手，请根据通过RAG技术从知识库中检索出的内容，回答用户的问题。请确保答案来自知识库中的信息。问题：{question}，检索到的内容：{context}",
+        input_variables=["question", "context"]
+    )
+    print(model.invoke(prompt.format(question="智能体里怎么使用提示词", context=documents)))

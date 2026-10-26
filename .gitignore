@@ -1,14 +1,36 @@
-# Python-generated files
+# Python 生成文件与测试缓存
 __pycache__/
 *.py[oc]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage*
+htmlcov/
 build/
 dist/
 wheels/
 *.egg-info
 
-# Virtual environments
+# 本地环境与依赖
 .venv
-
+node_modules/
+frontend/.npm-cache/
 .env
-.idea
+.env.*
+!.env.example
+!frontend/.env.example
+
+# 本地应用数据
+app/knowledge/chroma_db/
 app/db/resources
+
+# IDE 与操作系统文件
+.idea/
+.DS_Store
+Thumbs.db
+
+# 包管理器日志
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+/docs/
